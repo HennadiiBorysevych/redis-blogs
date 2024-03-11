@@ -1,10 +1,9 @@
-const mongoose = require('mongoose');
-const requireLogin = require('../middlewares/requireLogin');
-
-const Blog = mongoose.model('Blog');
-
-module.exports = app => {
-  app.get('/api/blogs/:id', requireLogin, async (req, res) => {
+const mongoose = require("mongoose");
+const requireLogin = require("../middlewares/requireLogin");
+const Blog = mongoose.model("Blog");
+const cleanCache = require("../middlewares/cleanCache");
+module.exports = (app) => {
+  app.get("/api/blogs/:id", requireLogin, async (req, res) => {
     const blog = await Blog.findOne({
       _user: req.user.id,
       _id: req.params.id
@@ -13,8 +12,7 @@ module.exports = app => {
     res.send(blog);
   });
 
-  app.get('/api/blogs', requireLogin, async (req, res) => {
-    
+  app.get("/api/blogs", requireLogin, async (req, res) => {
     // const redis = require('redis');
     // const util = require('util');
     // const redisUrl = 'redis://127.0.0.1:6379';
@@ -23,16 +21,18 @@ module.exports = app => {
 
     // // Do we have amy cached data in redis related to this query?
     // const cachedBlogs = await redisClient.get(req.user.id);
-    
+
     // // if yes we serve it from redis
     // if (cachedBlogs) {
     //   console.log('Serving from redis');
     //   res.send(JSON.parse(cachedBlogs));
     //   return;
     // }
-    
-    // if no we do the query  
-    const blogs = await Blog.find({ _user: req.user.id });
+
+    // if no we do the query
+    const blogs = await Blog.find({ _user: req.user.id }).cache({
+      key: req.user.id
+    });
     // console.log('Serving from mongo');
     res.send(blogs);
 
@@ -40,7 +40,7 @@ module.exports = app => {
     // redisClient.expire(req.user.id, 300);
   });
 
-  app.post('/api/blogs', requireLogin, async (req, res) => {
+  app.post("/api/blogs", requireLogin, cleanCache, async (req, res) => {
     const { title, content } = req.body;
 
     const blog = new Blog({
